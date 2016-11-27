@@ -348,7 +348,7 @@ notesAndRefs opts = do
         if | writerReferenceLocation opts == EndOfDocument -> empty
            | isEmpty notes' && isEmpty refs' -> empty
            | otherwise -> blankline
-  
+
   return $
     (if isEmpty notes' then empty else blankline <> notes') <>
     (if isEmpty refs' then empty else blankline <> refs') <>
