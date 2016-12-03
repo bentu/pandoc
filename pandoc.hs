@@ -77,7 +77,7 @@ import System.Posix.Terminal (queryTerminal)
 import System.Posix.IO (stdOutput)
 #endif
 import Control.Monad.Trans
-import Text.Pandoc.Class (withMediaBag, PandocIO)
+import Text.Pandoc.Class (withMediaBag, PandocIO, withWarningsToStderr)
 
 type Transform = Pandoc -> Pandoc
 
@@ -1410,10 +1410,14 @@ convertWithOpts opts args = do
             srcs <- convertTabs . intercalate "\n" <$> readSources sources'
             doc <- handleIncludes' srcs
             case doc of
-              Right doc' -> runIOorExplode $ withMediaBag $ r readerOpts doc'
+              Right doc' -> runIOorExplode $ withMediaBag
+                                           $ withWarningsToStderr
+                                           $ r readerOpts doc'
               Left e -> error $ show e
           ByteStringReader r -> readFiles sources' >>=
-                                (\bs -> runIOorExplode $ withMediaBag $ r readerOpts bs)
+                                (\bs -> runIOorExplode $ withMediaBag
+                                                       $ withWarningsToStderr
+                                                       $ r readerOpts bs)
 
   -- We parse first if (1) fileScope is set, (2), it's a binary
   -- reader, or (3) we're reading JSON. This is easier to do of an AND
@@ -1485,7 +1489,9 @@ convertWithOpts opts args = do
 
   case writer of
     -- StringWriter f -> f writerOptions doc' >>= writerFn outputFile
-    ByteStringWriter f -> (runIOorExplode $ f writerOptions doc') >>= writeFnBinary outputFile
+    ByteStringWriter f -> (runIOorExplode $ withWarningsToStderr
+                                          $ f writerOptions doc')
+                                          >>= writeFnBinary outputFile
     StringWriter f
       | pdfOutput -> do
               -- make sure writer is latex or beamer or context or html5
@@ -1519,5 +1525,6 @@ convertWithOpts opts args = do
                   handleEntities = if htmlFormat && ascii
                                    then toEntities
                                    else id
-              output <- runIOorExplode $ f writerOptions doc'
+              output <- runIOorExplode $ withWarningsToStderr
+                                       $ f writerOptions doc'
               selfcontain (output ++ ['\n' | not standalone']) >>= writerFn outputFile . handleEntities
